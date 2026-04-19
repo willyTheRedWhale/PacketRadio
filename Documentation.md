@@ -278,6 +278,9 @@ conn.setChannel(76);
 // Optional: set node IDs
 conn.setMyID(1);
 conn.setRemoteID(2);
+
+//Set the SPI to use, needs to be a pointer. default is SPI0, the default spi on the board, it stays that until changed.
+conn.setSPI(&SPI1 or &SPI);
 ```
 
 #### Reading configuration back

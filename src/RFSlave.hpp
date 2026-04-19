@@ -22,7 +22,9 @@ public:
     void init(uint8_t myID, Connection initialConnection) {
         connectionDetails = initialConnection;
         connectionDetails.setMyID(myID);
-        radio.begin();
+        connectionDetails.getSPI()->begin();
+        
+        radio.begin(connectionDetails.getSPI());
         radio.setDataRate(initialConnection.getDataRate()); 
         radio.setPALevel(initialConnection.getPALevel()); 
         radio.enableAckPayload();

@@ -11,6 +11,7 @@ class Connection {
 public:
     Connection(): Channel(0), MyID(0), RemoteID(0), lastReceivedTime(0), lastSentTime(0), connected(false){
         memset(Address, 0, sizeof(Address));
+        spi = &SPI;
     }
 
     // Configuration setters (call before init of the RFManagers)
@@ -22,7 +23,8 @@ public:
     void setRemoteID(uint8_t id)            { RemoteID = id; }
     void setPALevel(rf24_pa_dbm_e level)    { PALevel = level; }
     void setDataRate(rf24_datarate_e rate)  { Datarate = rate;}
-
+    void setSPI(SPIClass* s)                { spi = s;}
+    
     // getters
     void    getAddress(uint8_t* addr) const { memcpy(addr, Address, 5); }
     uint8_t getChannel()            const { return Channel; }
@@ -30,7 +32,7 @@ public:
     uint8_t getRemoteID()           const { return RemoteID; }
     rf24_datarate_e getDataRate()   const { return Datarate; }
     rf24_pa_dbm_e getPALevel()      const { return PALevel; }
-
+    SPIClass* getSPI()              const { return spi;}
 
     void updateReceived() {
         lastReceivedTime = millis();
@@ -66,7 +68,7 @@ private:
     uint8_t  RemoteID;
     rf24_pa_dbm_e PALevel;
     rf24_datarate_e Datarate;
-
+    SPIClass* spi;
     uint32_t lastReceivedTime;
     uint32_t lastSentTime;
     bool     connected; // stays false until the first packet is received
