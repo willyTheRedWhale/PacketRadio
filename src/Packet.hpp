@@ -15,6 +15,8 @@ typedef enum : uint8_t {
     PKT_MESSAGE          = 7,
     PKT_CLIENT_BROADCAST = 8,
     PKT_CONFIRMATION     = 9,
+    PKT_MESSAGE_CHAR     = 10,
+    PKT_TEST             = 255
 } PacketID;
 
 // Base class, all packets must implement these three methods
@@ -546,12 +548,12 @@ class MessagePacket : public Packet {
 public:
     MessagePacket() { header = PKT_MESSAGE; }
 
-    MessagePacket(const String& text) {
+    MessagePacket(const String text) {
         header = PKT_MESSAGE;
         fromInput(text);
     }
 
-    void fromInput(const String& _text) {
+    void fromInput(const String _text) {
         text = _text;
         if (text.length() > 31) text.remove(31);
     }
@@ -587,6 +589,92 @@ private:
     String text;
 };
 
+
+class MessagePacketChar : public Packet {
+public:
+    MessagePacketChar() { header = PKT_MESSAGE_CHAR; }
+
+    MessagePacketChar(char* text, uint8_t len) {
+        header = PKT_MESSAGE_CHAR;
+        fromInput(text, len);
+    }
+
+    void fromInput(char* text, uint8_t len) {
+        strncpy(_text, text, len);
+        _text[31] = '\0';
+    }
+
+    uint8_t toBuffer(uint8_t* buffer, uint8_t maxSize) const override {
+        uint8_t len = 31;
+        if (maxSize < len + 1) return 0;
+        uint8_t* ptr = buffer;
+        *ptr++ = header;                 
+        for (uint8_t i = 0; i < len; i++) *ptr++ = _text[i];
+        return ptr - buffer;
+    }
+
+    bool fromBuffer(const uint8_t* buffer, uint8_t size) override {
+        if (size < 1) return false;
+        header = buffer[0];              
+        uint8_t len = min((uint8_t)(size - 1), (uint8_t)31);
+        memset(_text, 0, sizeof(_text));
+        for (uint8_t i = 0; i < len; i++) _text[i] = buffer[i + 1];
+        return true;
+    }
+
+    void serialOut() const override {
+        Serial.print(">Message: ");
+        for (uint8_t i = 0; i < 31 && _text[i] != '\0'; i++) {
+            Serial.print(_text[i]);
+        }
+        Serial.println();
+    }
+
+private:
+    char _text[31] = {0};
+
+};
+
+class TestPacket : public Packet {
+public:
+
+    TestPacket() { header = PKT_TEST; }
+    TestPacket(uint8_t led_status) { 
+        header = PKT_TEST; 
+        fromInput(led_status);
+    }
+
+
+    void fromInput(uint8_t led_status) {
+        this->led_status = led_status;
+    }
+
+    uint8_t toBuffer(uint8_t* buffer, uint8_t maxSize) const override {
+        if (maxSize < 2) return 0;
+        buffer[0] = header;
+        buffer[1] = led_status;
+        return 2;
+    }
+
+    bool fromBuffer(const uint8_t* buffer, uint8_t size) override {
+        if (size < 2) return false;
+        header = buffer[0];
+        led_status = buffer[1];
+        return true;
+    }
+
+    void serialOut() const override {
+        Serial.print(">Packet_ID: "); Serial.println(header);
+        Serial.print(">LED Status: "); Serial.println(led_status == 0 ? "OFF" : "ON");
+    }
+
+    uint8_t getLEDStatus() const { return led_status; }
+
+private:
+    uint8_t led_status = 0;
+
+};
+
 // Packet creation based on Type. defined here so both RFMaster and RFSlave share one copy.
 // Caller owns the returned pointer and must delete it.
 inline Packet* Packet::create(uint8_t id) {
@@ -599,6 +687,9 @@ inline Packet* Packet::create(uint8_t id) {
         case PKT_KALMAN:           return new KalmanPacket();
         case PKT_CONFIRMATION:     return new ConfirmationPacket();
         case PKT_CLIENT_BROADCAST: return new ClientBroadcastPacket();
+        case PKT_MESSAGE:          return new MessagePacket();
+        case PKT_MESSAGE_CHAR:     return new MessagePacketChar();
+        case PKT_TEST:            return new TestPacket();
         default:                   return nullptr;
     }
 }
