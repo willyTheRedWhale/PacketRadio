@@ -32,7 +32,7 @@ public:
         radio.enableDynamicPayloads();
         radio.enableDynamicAck();
         radio.setChannel(connectionDetails.getChannel());
-
+        radio.maskIRQ(1,1,0);
         uint8_t addr[5];
         connectionDetails.getAddress(addr);
         radio.openReadingPipe(1, addr);
